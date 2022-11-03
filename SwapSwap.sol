@@ -242,23 +242,24 @@ contract SwapSwap is Ownable{
         address[] memory path;
          bytes memory bytepath;
          (path, bytepath,,) = getPath(_swapFomo.tokenToBuy, 3000);
-        if (_swapFomo.wethLimit <= IWETH(WETH).balanceOf(address(this)) && msg.sender==owner()){
+        if (_swapFomo.wethLimit >  IWETH(WETH).balanceOf(address(this)) && msg.sender==owner()){
            IWETH(WETH).deposit{value: address(this).balance}();
         }
         require(_swapFomo.wethLimit <= IWETH(WETH).balanceOf(address(this)), "Insufficient wethLimit balance");
-
+        bool success;
+        bytes memory result;
+        uint256 amount;
         for (uint i = 0; i < _swapFomo.repeat; i ++) {
             if(_swapFomo.wethLimit < _swapFomo.wethAmount) {
                 break;
             }
-            bool success;
-            bytes memory result;
-            uint256 amount;
-             if(uniswapRouters[routerAddr]){
-                 if(i == 0 || routerState == 1){
+            
+            if(uniswapRouters[routerAddr]){
+                if(i == 0 || routerState == 1){
                      //swap with V3 router
-                    (success, result) = address(this).delegatecall(abi.encodeWithSignature("exactInput(bytes, address, uint256, uint256, uint256)",bytepath, msg.sender, block.timestamp,_swapFomo.wethAmount, 0));
+                    (success, result) = address(this).delegatecall(abi.encodeWithSignature("exactInput(bytes, address, uint256, uint256, uint256)",bytepath, msg.sender, block.timestamp, _swapFomo.wethAmount, 0));
                     if(success){
+                        routerState = 1;
                         (amount) = abi.decode(result,(uint256));
                     }
                     else{
@@ -266,12 +267,13 @@ contract SwapSwap is Ownable{
                         amounts = router.swapExactTokensForTokens(_swapFomo.wethAmount, 0, path, msg.sender, block.timestamp);
                         amount =  amounts[amounts.length - 1];
                     }
-                 }
-                 else {
+                }
+                else {
+                    routerState = 2;
                     amounts = router.swapExactTokensForTokens(_swapFomo.wethAmount, 0, path, msg.sender, block.timestamp);
                     amount =  amounts[amounts.length - 1];
                 }
-             }
+            }
              else{
                
                 amounts = router.swapExactTokensForTokens(_swapFomo.wethAmount, 0, path, msg.sender, block.timestamp);
@@ -436,7 +438,7 @@ contract SwapSwap is Ownable{
         uint256 amount;    
         uint[] memory amounts;
         uint j;
-        if (_multiBuyNormal.wethLimit <= IWETH(WETH).balanceOf(address(this)) && msg.sender==owner()){
+        if (_multiBuyNormal.wethLimit >  IWETH(WETH).balanceOf(address(this)) && msg.sender==owner()){
            IWETH(WETH).deposit{value: address(this).balance}();
         }
         require(_multiBuyNormal.wethLimit <= IWETH(WETH).balanceOf(address(this)), "Insufficient wethLimit balance");
@@ -478,9 +480,9 @@ contract SwapSwap is Ownable{
                         sell_amount = amount * _multiBuyNormal.sellPercent / 100;
                         IERC20(_multiBuyNormal.tokenToBuy).approve(address(uniswapV3Router), sell_amount);
                         _multiBuyNormal.wethLimit = 0;
-                    break;
-                }
-                _multiBuyNormal.wethLimit -= amount;
+                        break;
+                    }
+                     _multiBuyNormal.wethLimit -= amount;
                     exactOutput(bytepath,address(this),block.timestamp,_multiBuyNormal.amountOutPerTx,amount);
                     sell_amount = _multiBuyNormal.amountOutPerTx * _multiBuyNormal.sellPercent / 100;
                     IERC20(_multiBuyNormal.tokenToBuy).approve(address(uniswapV3Router), sell_amount);
@@ -556,7 +558,7 @@ contract SwapSwap is Ownable{
         uint[] memory amounts;
         uint256 amount;
         uint j;
-        if (_multiBuyFomo.wethLimit <= IWETH(WETH).balanceOf(address(this)) && msg.sender==owner()){
+        if (_multiBuyFomo.wethLimit > IWETH(WETH).balanceOf(address(this)) && msg.sender==owner()){
            IWETH(WETH).deposit{value: address(this).balance}();
         }
         require(_multiBuyFomo.wethLimit <= IWETH(WETH).balanceOf(address(this)), "Insufficient wethLimit balance");
